@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Matrix Lasers Reactive</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000000;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+        #ui-layer {
+            position: absolute;
+            bottom: 30px;
+            left: 0;
+            width: 100%;
+            pointer-events: none;
+            text-align: center;
+            z-index: 10;
+        }
+        .title {
+            color: rgba(255, 255, 255, 1);
+            font-size: 16px;
+            letter-spacing: 6px;
+            text-transform: uppercase;
+            font-weight: 600;
+            text-shadow: 0 0 20px rgba(0, 255, 255, 0.6);
+            margin-bottom: 5px;
+            transition: color 0.2s;
+        }
+        .subtitle {
+            color: rgba(150, 150, 150, 0.7);
+            font-size: 11px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+        /* Botón de Audio Estilizado */
+        #start-audio {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 15px 40px;
+            border: 1px solid #00ffff;
+            background: rgba(0, 10, 20, 0.8);
+            color: #00ffff;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            font-size: 14px;
+            letter-spacing: 3px;
+            cursor: pointer;
+            text-transform: uppercase;
+            pointer-events: auto;
+            z-index: 20;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+            backdrop-filter: blur(5px);
+        }
+        #start-audio:hover {
+            background: rgba(0, 255, 255, 0.2);
+            box-shadow: 0 0 40px rgba(0, 255, 255, 0.6);
+            letter-spacing: 5px;
+        }
+        .vignette {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            background: radial-gradient(circle, transparent 40%, rgba(0,0,0,0.95) 100%);
+            z-index: 5;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="vignette"></div>
+    
+    <div id="ui-layer">
+        <div id="status-title" class="title">Sistema en Espera</div>
+        <div class="subtitle">Matriz Externa • Enlace Láser</div>
+    </div>
+
+    <button id="start-audio">Inicializar Audio</button>
+
+    <div id="canvas-container"></div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+        // --- Configuración de Escena ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x000000);
+        scene.fog = new THREE.FogExp2(0x000000, 0.015); // Niebla ajustada para la matriz lejana
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0, 4, 12);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.1;
+        container.appendChild(renderer.domElement);
+
+        // --- Post-Processing ---
+        const renderScene = new RenderPass(scene, camera);
+        const bloomPass = new UnrealBloomPass(
+            new THREE.Vector2(window.innerWidth, window.innerHeight),
+            1.6, 0.2, 0.05
+        );
+        const composer = new EffectComposer(renderer);
+        composer.addPass(renderScene);
+        composer.addPass(bloomPass);
+
+        // --- Controles ---
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.enablePan = false;
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 0.8;
+        controls.maxDistance = 40; // Permitir zoom out para ver la matriz completa
+
+        // --- GRUPO PRINCIPAL ---
+        const geometryGroup = new THREE.Group();
+        scene.add(geometryGroup);
+
+        // ==========================================
+        // 1. GEOMETRÍA INTERNA (Core & Layers)
+        // ==========================================
+
+        // Core (Graves)
+        const coreMat = new THREE.MeshBasicMaterial({ 
+            color: 0xffffff, wireframe: true, transparent: true, opacity: 0.9, side: THREE.DoubleSide
+        });
+        const core = new THREE.Mesh(new THREE.IcosahedronGeometry(1.0, 0), coreMat);
+        geometryGroup.add(core);
+
+        // Capa Intermedia (Medios) - Base de los Láseres
+        const midRadius = 1.8;
+        const midGeoBase = new THREE.DodecahedronGeometry(midRadius, 0);
+        const midMat = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 2 });
+        const dodeca = new THREE.LineSegments(new THREE.EdgesGeometry(midGeoBase), midMat);
+        geometryGroup.add(dodeca);
+
+        // Capa Externa Cercana (Agudos)
+        const outerMat = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 2 });
+        const outer = new THREE.LineSegments(
+            new THREE.EdgesGeometry(new THREE.IcosahedronGeometry(2.8, 1)), 
+            outerMat
+        );
+        geometryGroup.add(outer);
+
+        // ==========================================
+        // 2. MATRIZ ESFÉRICA EXTERNA (NUEVO)
+        // ==========================================
+        
+        const matrixRadius = 35.0;
+        const matrixGeo = new THREE.IcosahedronGeometry(matrixRadius, 2); // Detalle 2 para que parezca una red
+        // Usamos WireframeGeometry para obtener la rejilla completa de triángulos
+        const matrixWireframe = new THREE.WireframeGeometry(matrixGeo);
+        
+        const matrixMat = new THREE.LineBasicMaterial({ 
+            color: 0x224466, // Azul oscuro profundo
+            transparent: true, 
+            opacity: 0.15,
+            linewidth: 1
+        });
+        
+        const matrixSphere = new THREE.LineSegments(matrixWireframe, matrixMat);
+        scene.add(matrixSphere); // Añadida a la escena, no al grupo pulsante
+
+        // ==========================================
+        // 3. LÁSERES DE CONEXIÓN (NUEVO)
+        // ==========================================
+
+        // Creamos líneas que van desde los vértices del Dodecaedro (Mid) hasta la Matriz
+        const laserGeo = new THREE.BufferGeometry();
+        const laserPositions = [];
+        
+        // Obtenemos los vértices únicos del dodecaedro base
+        const dodecaVertices = [];
+        const posAttr = midGeoBase.attributes.position;
+        
+        // El Dodecaedro tiene vértices repetidos por caras, filtremos por proximidad para obtener únicos (o usamos todos para más láseres)
+        // Usaremos todos los vértices crudos para un efecto de haz denso
+        for (let i = 0; i < posAttr.count; i++) {
+            const v = new THREE.Vector3().fromBufferAttribute(posAttr, i);
+            
+            // Punto de inicio: Vértice del Dodecaedro
+            laserPositions.push(v.x, v.y, v.z);
+            
+            // Punto final: Proyección hacia la esfera exterior
+            // Normalizamos el vector y lo multiplicamos por el radio de la matriz (menos un poco)
+            const dir = v.clone().normalize();
+            const target = dir.multiplyScalar(matrixRadius * 0.95);
+            
+            laserPositions.push(target.x, target.y, target.z);
+        }
+
+        laserGeo.setAttribute('position', new THREE.Float32BufferAttribute(laserPositions, 3));
+        
+        const laserMat = new THREE.LineBasicMaterial({
+            color: 0x00ffff,
+            transparent: true,
+            opacity: 0.0, // Empiezan invisibles hasta que haya audio
+            blending: THREE.AdditiveBlending
+        });
+
+        const lasers = new THREE.LineSegments(laserGeo, laserMat);
+        
+        // IMPORTANTE: Añadimos los láseres al dodecaedro para que roten con él
+        dodeca.add(lasers);
+
+
+        // ==========================================
+        // 4. PARTÍCULAS (Vórtice)
+        // ==========================================
+        const particleCount = 4000;
+        const particlesGeometry = new THREE.BufferGeometry();
+        const pPositions = new Float32Array(particleCount * 3);
+        const pAngles = new Float32Array(particleCount);
+        const pTubeAngles = new Float32Array(particleCount);
+        const pSpeeds = new Float32Array(particleCount);
+        const BASE_MAJOR = 6.0;
+        const BASE_MINOR = 2.5;
+
+        for(let i = 0; i < particleCount; i++) {
+            const i3 = i * 3;
+            pTubeAngles[i] = Math.random() * Math.PI * 2;
+            pAngles[i] = Math.random() * Math.PI * 2;
+            pSpeeds[i] = 0.002 + Math.random() * 0.004;
+            // Init dummy positions
+            pPositions[i3] = 0; pPositions[i3+1] = 0; pPositions[i3+2] = 0;
+        }
+        particlesGeometry.setAttribute('position', new THREE.BufferAttribute(pPositions, 3));
+        const particlesMat = new THREE.PointsMaterial({
+            color: 0xffffff, size: 0.06, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending
+        });
+        const torusSystem = new THREE.Points(particlesGeometry, particlesMat);
+        scene.add(torusSystem);
+
+        const light1 = new THREE.PointLight(0xffffff, 5, 20);
+        scene.add(light1);
+
+
+        // ==========================================
+        // SISTEMA DE AUDIO
+        // ==========================================
+        let audioContext, analyser, dataArray;
+        let isAudioActive = false;
+        let bass = 0, mid = 0, treble = 0;
+        let bassSmooth = 0, midSmooth = 0, trebleSmooth = 0;
+
+        document.getElementById('start-audio').addEventListener('click', async () => {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const source = audioContext.createMediaStreamSource(stream);
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 512; 
+                dataArray = new Uint8Array(analyser.frequencyBinCount);
+                source.connect(analyser);
+                isAudioActive = true;
+                
+                const btn = document.getElementById('start-audio');
+                btn.style.opacity = '0';
+                setTimeout(() => btn.style.display = 'none', 500);
+                
+                const status = document.getElementById('status-title');
+                status.innerText = "ENLACE NEURONAL ACTIVO";
+                status.style.color = "#00ffff";
+                status.style.textShadow = "0 0 30px #00ffff";
+            } catch (err) {
+                console.error(err);
+                alert("Error de micrófono.");
+            }
+        });
+
+        function analyzeAudio() {
+            if (!isAudioActive) return;
+            analyser.getByteFrequencyData(dataArray);
+            
+            // Promedios simples
+            let b = 0, m = 0, t = 0;
+            // Bass: 0-10
+            for(let i=0; i<10; i++) b += dataArray[i];
+            // Mid: 10-50
+            for(let i=10; i<50; i++) m += dataArray[i];
+            // Treble: 50-150 (Más amplio para captar hi-hats)
+            for(let i=50; i<150; i++) t += dataArray[i];
+
+            bass = b / 10;
+            mid = m / 40;
+            treble = t / 100;
+        }
+
+        // --- Loop de Animación ---
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = clock.getElapsedTime();
+
+            analyzeAudio();
+
+            // Suavizado
+            bassSmooth = THREE.MathUtils.lerp(bassSmooth, bass, 0.12);
+            midSmooth = THREE.MathUtils.lerp(midSmooth, mid, 0.1);
+            trebleSmooth = THREE.MathUtils.lerp(trebleSmooth, treble, 0.1);
+
+            const bassNorm = bassSmooth / 255;
+            const midNorm = midSmooth / 255;
+            const trebleNorm = trebleSmooth / 255;
+
+            // --- COLORES DINÁMICOS ---
+            const hueCore = (time * 0.1) % 1; 
+            const hueMid = (time * 0.05 + 0.3) % 1;
+            const hueOuter = (time * 0.03 + 0.6) % 1;
+
+            // Colores base + reactividad
+            coreMat.color.setHSL(hueCore - bassNorm * 0.1, 0.6 + bassNorm * 0.4, 0.5 + bassNorm * 0.5);
+            midMat.color.setHSL(hueMid, 0.8, 0.3 + midNorm * 0.7);
+            outerMat.color.setHSL(hueOuter, 0.9, 0.3 + trebleNorm * 0.7);
+            
+            // LA LUZ SIGUE AL CORE
+            light1.color.copy(coreMat.color);
+            light1.intensity = 5 + bassNorm * 10;
+
+            // --- ANIMACIÓN MATRIZ & LÁSERES ---
+            
+            // Matriz rota lento y opuestamente
+            matrixSphere.rotation.y = -time * 0.05;
+            matrixSphere.rotation.x = Math.sin(time * 0.1) * 0.05;
+            
+            // Matriz pulsa con Bajos Profundos
+            // Hacemos que la opacidad sea sutil normalmente (0.1) y suba con el bajo (hasta 0.4)
+            matrixMat.opacity = 0.1 + bassNorm * 0.25;
+            matrixMat.color.setHSL(0.6, 0.5, 0.2 + bassNorm * 0.3); // Azul oscila brillo
+
+            // Láseres: Reaccionan a Agudos y Medios Altos
+            // Son casi invisibles en silencio y brillan intensamente con música
+            const laserIntensity = Math.max(0, (midNorm + trebleNorm) * 0.8 - 0.1);
+            laserMat.opacity = laserIntensity; 
+            // Color láser: Cian eléctrico, variando hacia blanco con intensidad
+            laserMat.color.setHSL(hueMid, 1.0, 0.5 + laserIntensity * 0.5);
+
+
+            // --- ANIMACIÓN GEOMÉTRICA ---
+            
+            // Rotaciones y Escalas con Audio
+            const scalePulse = 1 + bassNorm * 0.6;
+            
+            core.rotation.y += 0.01 + bassNorm * 0.05;
+            core.scale.setScalar(scalePulse);
+
+            dodeca.rotation.x += 0.005 + midNorm * 0.02;
+            dodeca.rotation.y -= 0.005 + midNorm * 0.02;
+            dodeca.scale.setScalar(1 + midNorm * 0.15); // Los láseres se estiran con esto
+
+            outer.rotation.z += 0.002 + trebleNorm * 0.02;
+            
+            // --- ANIMACIÓN PARTÍCULAS ---
+            bloomPass.strength = 1.4 + (bassNorm * 1.2) + (trebleNorm * 0.8);
+
+            const posArray = particlesGeometry.attributes.position.array;
+            
+            for(let i = 0; i < particleCount; i++) {
+                const i3 = i * 3;
+                
+                // Audio Boost en velocidad
+                const speedBoost = pSpeeds[i] * (1 + trebleNorm * 12 + midNorm * 5);
+                pTubeAngles[i] += speedBoost * 3;
+                pAngles[i] += speedBoost * 4;
+
+                const u = pTubeAngles[i];
+                const v = pAngles[i];
+                
+                // Expansión Audio
+                const cm = BASE_MAJOR + bassNorm * 3.0; // Se expande mucho con bajos
+                const cmi = BASE_MINOR + midNorm * 1.5;
+
+                const wobble = Math.sin(time * 3 + i) * (0.1 + trebleNorm);
+                const r = cmi + wobble;
+
+                const x = (cm + r * Math.cos(v)) * Math.cos(u);
+                const y = r * Math.sin(v) + Math.sin(u * 5 + time) * (0.5 + bassNorm * 2);
+                const z = (cm + r * Math.cos(v)) * Math.sin(u);
+
+                posArray[i3] = x;
+                posArray[i3+1] = y;
+                posArray[i3+2] = z;
+            }
+            particlesGeometry.attributes.position.needsUpdate = true;
+            torusSystem.rotation.z += 0.002 + bassNorm * 0.01;
+
+
+            controls.update();
+            composer.render();
+        }
+
+        window.addEventListener('resize', () => {
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+            renderer.setSize(w, h);
+            composer.setSize(w, h);
+        });
+
+        animate();
+    </script>
+</body>
+</html>
