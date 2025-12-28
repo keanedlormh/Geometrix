@@ -41,7 +41,7 @@
             letter-spacing: 2px;
             text-transform: uppercase;
         }
-        /* BotÛn de Audio Estilizado */
+        /* Bot√≥n de Audio Estilizado */
         #start-audio {
             position: absolute;
             top: 50%;
@@ -83,7 +83,7 @@
     
     <div id="ui-layer">
         <div id="status-title" class="title">Sistema en Espera</div>
-        <div class="subtitle">Matriz Externa ï Enlace L·ser</div>
+        <div class="subtitle">Matriz Externa ‚Ä¢ Enlace L√°ser</div>
     </div>
 
     <button id="start-audio">Inicializar Audio</button>
@@ -106,7 +106,7 @@
         import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
         import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 
-        // --- ConfiguraciÛn de Escena ---
+        // --- Configuraci√≥n de Escena ---
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x000000);
@@ -146,7 +146,7 @@
         scene.add(geometryGroup);
 
         // ==========================================
-        // 1. GEOMETRÕA INTERNA (Core & Layers)
+        // 1. GEOMETR√çA INTERNA (Core & Layers)
         // ==========================================
 
         // Core (Graves)
@@ -156,7 +156,7 @@
         const core = new THREE.Mesh(new THREE.IcosahedronGeometry(1.0, 0), coreMat);
         geometryGroup.add(core);
 
-        // Capa Intermedia (Medios) - Base de los L·seres
+        // Capa Intermedia (Medios) - Base de los L√°seres
         const midRadius = 1.8;
         const midGeoBase = new THREE.DodecahedronGeometry(midRadius, 0);
         const midMat = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 2 });
@@ -172,12 +172,12 @@
         geometryGroup.add(outer);
 
         // ==========================================
-        // 2. MATRIZ ESF…RICA EXTERNA (NUEVO)
+        // 2. MATRIZ ESF√âRICA EXTERNA (NUEVO)
         // ==========================================
         
         const matrixRadius = 35.0;
         const matrixGeo = new THREE.IcosahedronGeometry(matrixRadius, 2); // Detalle 2 para que parezca una red
-        // Usamos WireframeGeometry para obtener la rejilla completa de tri·ngulos
+        // Usamos WireframeGeometry para obtener la rejilla completa de tri√°ngulos
         const matrixWireframe = new THREE.WireframeGeometry(matrixGeo);
         
         const matrixMat = new THREE.LineBasicMaterial({ 
@@ -188,29 +188,29 @@
         });
         
         const matrixSphere = new THREE.LineSegments(matrixWireframe, matrixMat);
-        scene.add(matrixSphere); // AÒadida a la escena, no al grupo pulsante
+        scene.add(matrixSphere); // A√±adida a la escena, no al grupo pulsante
 
         // ==========================================
-        // 3. L¡SERES DE CONEXI”N (NUEVO)
+        // 3. L√ÅSERES DE CONEXI√ìN (NUEVO)
         // ==========================================
 
-        // Creamos lÌneas que van desde los vÈrtices del Dodecaedro (Mid) hasta la Matriz
+        // Creamos l√≠neas que van desde los v√©rtices del Dodecaedro (Mid) hasta la Matriz
         const laserGeo = new THREE.BufferGeometry();
         const laserPositions = [];
         
-        // Obtenemos los vÈrtices ˙nicos del dodecaedro base
+        // Obtenemos los v√©rtices √∫nicos del dodecaedro base
         const dodecaVertices = [];
         const posAttr = midGeoBase.attributes.position;
         
-        // El Dodecaedro tiene vÈrtices repetidos por caras, filtremos por proximidad para obtener ˙nicos (o usamos todos para m·s l·seres)
-        // Usaremos todos los vÈrtices crudos para un efecto de haz denso
+        // El Dodecaedro tiene v√©rtices repetidos por caras, filtremos por proximidad para obtener √∫nicos (o usamos todos para m√°s l√°seres)
+        // Usaremos todos los v√©rtices crudos para un efecto de haz denso
         for (let i = 0; i < posAttr.count; i++) {
             const v = new THREE.Vector3().fromBufferAttribute(posAttr, i);
             
-            // Punto de inicio: VÈrtice del Dodecaedro
+            // Punto de inicio: V√©rtice del Dodecaedro
             laserPositions.push(v.x, v.y, v.z);
             
-            // Punto final: ProyecciÛn hacia la esfera exterior
+            // Punto final: Proyecci√≥n hacia la esfera exterior
             // Normalizamos el vector y lo multiplicamos por el radio de la matriz (menos un poco)
             const dir = v.clone().normalize();
             const target = dir.multiplyScalar(matrixRadius * 0.95);
@@ -229,12 +229,12 @@
 
         const lasers = new THREE.LineSegments(laserGeo, laserMat);
         
-        // IMPORTANTE: AÒadimos los l·seres al dodecaedro para que roten con Èl
+        // IMPORTANTE: A√±adimos los l√°seres al dodecaedro para que roten con √©l
         dodeca.add(lasers);
 
 
         // ==========================================
-        // 4. PARTÕCULAS (VÛrtice)
+        // 4. PART√çCULAS (V√≥rtice)
         // ==========================================
         const particleCount = 4000;
         const particlesGeometry = new THREE.BufferGeometry();
@@ -293,7 +293,7 @@
                 status.style.textShadow = "0 0 30px #00ffff";
             } catch (err) {
                 console.error(err);
-                alert("Error de micrÛfono.");
+                alert("Error de micr√≥fono.");
             }
         });
 
@@ -307,7 +307,7 @@
             for(let i=0; i<10; i++) b += dataArray[i];
             // Mid: 10-50
             for(let i=10; i<50; i++) m += dataArray[i];
-            // Treble: 50-150 (M·s amplio para captar hi-hats)
+            // Treble: 50-150 (M√°s amplio para captar hi-hats)
             for(let i=50; i<150; i++) t += dataArray[i];
 
             bass = b / 10;
@@ -315,7 +315,7 @@
             treble = t / 100;
         }
 
-        // --- Loop de AnimaciÛn ---
+        // --- Loop de Animaci√≥n ---
         const clock = new THREE.Clock();
 
         function animate() {
@@ -333,7 +333,7 @@
             const midNorm = midSmooth / 255;
             const trebleNorm = trebleSmooth / 255;
 
-            // --- COLORES DIN¡MICOS ---
+            // --- COLORES DIN√ÅMICOS ---
             const hueCore = (time * 0.1) % 1; 
             const hueMid = (time * 0.05 + 0.3) % 1;
             const hueOuter = (time * 0.03 + 0.6) % 1;
@@ -347,7 +347,7 @@
             light1.color.copy(coreMat.color);
             light1.intensity = 5 + bassNorm * 10;
 
-            // --- ANIMACI”N MATRIZ & L¡SERES ---
+            // --- ANIMACI√ìN MATRIZ & L√ÅSERES ---
             
             // Matriz rota lento y opuestamente
             matrixSphere.rotation.y = -time * 0.05;
@@ -358,15 +358,15 @@
             matrixMat.opacity = 0.1 + bassNorm * 0.25;
             matrixMat.color.setHSL(0.6, 0.5, 0.2 + bassNorm * 0.3); // Azul oscila brillo
 
-            // L·seres: Reaccionan a Agudos y Medios Altos
-            // Son casi invisibles en silencio y brillan intensamente con m˙sica
+            // L√°seres: Reaccionan a Agudos y Medios Altos
+            // Son casi invisibles en silencio y brillan intensamente con m√∫sica
             const laserIntensity = Math.max(0, (midNorm + trebleNorm) * 0.8 - 0.1);
             laserMat.opacity = laserIntensity; 
-            // Color l·ser: Cian elÈctrico, variando hacia blanco con intensidad
+            // Color l√°ser: Cian el√©ctrico, variando hacia blanco con intensidad
             laserMat.color.setHSL(hueMid, 1.0, 0.5 + laserIntensity * 0.5);
 
 
-            // --- ANIMACI”N GEOM…TRICA ---
+            // --- ANIMACI√ìN GEOM√âTRICA ---
             
             // Rotaciones y Escalas con Audio
             const scalePulse = 1 + bassNorm * 0.6;
@@ -376,11 +376,11 @@
 
             dodeca.rotation.x += 0.005 + midNorm * 0.02;
             dodeca.rotation.y -= 0.005 + midNorm * 0.02;
-            dodeca.scale.setScalar(1 + midNorm * 0.15); // Los l·seres se estiran con esto
+            dodeca.scale.setScalar(1 + midNorm * 0.15); // Los l√°seres se estiran con esto
 
             outer.rotation.z += 0.002 + trebleNorm * 0.02;
             
-            // --- ANIMACI”N PARTÕCULAS ---
+            // --- ANIMACI√ìN PART√çCULAS ---
             bloomPass.strength = 1.4 + (bassNorm * 1.2) + (trebleNorm * 0.8);
 
             const posArray = particlesGeometry.attributes.position.array;
@@ -396,7 +396,7 @@
                 const u = pTubeAngles[i];
                 const v = pAngles[i];
                 
-                // ExpansiÛn Audio
+                // Expansi√≥n Audio
                 const cm = BASE_MAJOR + bassNorm * 3.0; // Se expande mucho con bajos
                 const cmi = BASE_MINOR + midNorm * 1.5;
 
@@ -431,4 +431,5 @@
         animate();
     </script>
 </body>
+
 </html>
